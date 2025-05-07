@@ -1,0 +1,4 @@
+httpx>=0.24.0
+mcp-python>=0.1.0
+typing-extensions>=4.5.0
+asyncio>=3.4.3 
