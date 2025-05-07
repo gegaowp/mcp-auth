@@ -27,11 +27,13 @@ async def call_jsonrpc(method, params):
             response = await client.post(
                 JSONRPC_SERVER, 
                 json=request,
-                headers={"Content-Type": "application/json"}
+                headers={"Content-Type": "application/json"},
+                timeout=10.0
             )
             response.raise_for_status()
             return response.json()
         except Exception as e:
+            print(f"Error calling JSON-RPC server: {str(e)}")
             return {"error": f"Error calling JSON-RPC server: {str(e)}"}
 
 @mcp.tool()
@@ -41,30 +43,47 @@ async def echo(message: str) -> str:
     Args:
         message: The message to echo back
     """
-    response = await call_jsonrpc("echo", [message])
-    
-    if "error" in response:
-        return f"Error: {response['error']}"
-    
-    if "result" in response:
-        return f"Echo response: {response['result']}"
-    
-    return "Unexpected response format"
+    try:
+        response = await call_jsonrpc("echo", [message])
+        
+        if "error" in response:
+            return f"Error: {response['error']}"
+        
+        if "result" in response:
+            # Handle both string and array results
+            result = response['result']
+            if isinstance(result, list) and len(result) > 0:
+                return f"Echo response: {result[0]}"
+            return f"Echo response: {result}"
+        
+        return "Unexpected response format"
+    except Exception as e:
+        print(f"Error in echo tool: {str(e)}")
+        return f"Error: {str(e)}"
 
 @mcp.tool()
 async def get_time() -> str:
     """Get the current server time.
     """
-    response = await call_jsonrpc("get_time", [])
-    
-    if "error" in response:
-        return f"Error: {response['error']}"
-    
-    if "result" in response:
-        return f"Current server time: {response['result']}"
-    
-    return "Unexpected response format"
+    try:
+        response = await call_jsonrpc("get_time", [])
+        
+        if "error" in response:
+            return f"Error: {response['error']}"
+        
+        if "result" in response:
+            return f"Current server time: {response['result']}"
+        
+        return "Unexpected response format"
+    except Exception as e:
+        print(f"Error in get_time tool: {str(e)}")
+        return f"Error: {str(e)}"
 
 if __name__ == "__main__":
+    # Enable debug logging
+    import logging
+    logging.basicConfig(level=logging.DEBUG)
+    
+    print("MCP server starting - connecting to JSON-RPC server at:", JSONRPC_SERVER)
     # Initialize and run the server with stdio transport
     mcp.run(transport='stdio') 
