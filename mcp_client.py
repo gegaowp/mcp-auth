@@ -133,7 +133,7 @@ class MCPClient:
                     await self.call_tool('echo', message=message)
                     
                 elif command.lower() == 'time':
-                    response = await self.call_tool("get_time", {})
+                    response = await self.call_tool("get_time")
                     print(f"{GREEN}Server response:{RESET} {response}")
                 elif command.lower() == 'purchase_token':
                     print("Purchasing token...")

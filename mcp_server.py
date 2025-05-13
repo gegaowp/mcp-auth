@@ -10,6 +10,9 @@ mcp = FastMCP("jsonrpc-proxy")
 # Local JSON-RPC server endpoint
 JSONRPC_SERVER = "http://localhost:8080"
 
+# Global variable to store the current token
+current_token: str | None = None
+
 async def call_jsonrpc(method, params):
     """Helper function to call the local JSON-RPC server."""
     
@@ -38,8 +41,8 @@ async def call_jsonrpc(method, params):
 
 @mcp.tool()
 async def purchase_token() -> str:
-    """Purchase a JWT token.
-    """
+    """Purchase a JWT token and store it for subsequent calls."""
+    global current_token
     try:
         response = await call_jsonrpc("purchase_token", [])
         
@@ -47,7 +50,8 @@ async def purchase_token() -> str:
             return f"Error: {response['error']}"
         
         if "result" in response:
-            return f"Token: {response['result']}"
+            current_token = response['result']
+            return "Token purchased and stored successfully."
         
         return "Unexpected response format"
     except Exception as e:
@@ -55,15 +59,16 @@ async def purchase_token() -> str:
         return f"Error: {str(e)}"
 
 @mcp.tool()
-async def echo(message: str, token: str) -> str:
-    """Echo back a message.
+async def echo(message: str) -> str:
+    """Echo back a message. Uses the stored token if available.
     
     Args:
         message: The message to echo back
-        token: The JWT token for authentication
     """
+    global current_token
     try:
-        response = await call_jsonrpc("echo", [message, token])
+        # Pass current_token, which might be None
+        response = await call_jsonrpc("echo", [current_token, message])
         
         if "error" in response:
             return f"Error: {response['error']}"
@@ -81,14 +86,12 @@ async def echo(message: str, token: str) -> str:
         return f"Error: {str(e)}"
 
 @mcp.tool()
-async def get_time(token: str) -> str:
-    """Get the current server time.
-    
-    Args:
-        token: The JWT token for authentication
-    """
+async def get_time() -> str:
+    """Get the current server time. Uses the stored token if available."""
+    global current_token
     try:
-        response = await call_jsonrpc("get_time", [token])
+        print(f"Current token: {current_token}")
+        response = await call_jsonrpc("get_time", [current_token])
         
         if "error" in response:
             return f"Error: {response['error']}"
