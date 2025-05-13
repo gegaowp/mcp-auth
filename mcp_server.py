@@ -37,14 +37,33 @@ async def call_jsonrpc(method, params):
             return {"error": f"Error calling JSON-RPC server: {str(e)}"}
 
 @mcp.tool()
-async def echo(message: str) -> str:
+async def purchase_token() -> str:
+    """Purchase a JWT token.
+    """
+    try:
+        response = await call_jsonrpc("purchase_token", [])
+        
+        if "error" in response:
+            return f"Error: {response['error']}"
+        
+        if "result" in response:
+            return f"Token: {response['result']}"
+        
+        return "Unexpected response format"
+    except Exception as e:
+        print(f"Error in purchase_token tool: {str(e)}")
+        return f"Error: {str(e)}"
+
+@mcp.tool()
+async def echo(message: str, token: str) -> str:
     """Echo back a message.
     
     Args:
         message: The message to echo back
+        token: The JWT token for authentication
     """
     try:
-        response = await call_jsonrpc("echo", [message])
+        response = await call_jsonrpc("echo", [message, token])
         
         if "error" in response:
             return f"Error: {response['error']}"
@@ -62,11 +81,14 @@ async def echo(message: str) -> str:
         return f"Error: {str(e)}"
 
 @mcp.tool()
-async def get_time() -> str:
+async def get_time(token: str) -> str:
     """Get the current server time.
+    
+    Args:
+        token: The JWT token for authentication
     """
     try:
-        response = await call_jsonrpc("get_time", [])
+        response = await call_jsonrpc("get_time", [token])
         
         if "error" in response:
             return f"Error: {response['error']}"

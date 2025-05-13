@@ -15,6 +15,6 @@ source venv/bin/activate
 
 run both server and client with a CLI interface
 ```
-python ./mcp_server.py
-python ./mcp_client.py
+./venv/bin/python ./mcp_server.py
+./venv/bin/python ./mcp_client.py
 ```

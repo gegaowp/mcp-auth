@@ -122,6 +122,7 @@ class MCPClient:
                     print("  list              - List available tools")
                     print("  echo <message>    - Call echo tool")
                     print("  time              - Get current time")
+                    print("  purchase_token    - Purchase a JWT token")
                     print("  exit              - Exit the client")
                     
                 elif command.lower() == 'list':
@@ -132,7 +133,12 @@ class MCPClient:
                     await self.call_tool('echo', message=message)
                     
                 elif command.lower() == 'time':
-                    await self.call_tool('get_time')
+                    response = await self.call_tool("get_time", {})
+                    print(f"{GREEN}Server response:{RESET} {response}")
+                elif command.lower() == 'purchase_token':
+                    print("Purchasing token...")
+                    response = await self.call_tool("purchase_token")
+                    print(f"{GREEN}Server response:{RESET} {response}")
                     
                 else:
                     print(f"{RED}Unknown command. Type 'help' for usage information.{RESET}")
