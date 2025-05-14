@@ -7,6 +7,9 @@ from contextlib import AsyncExitStack
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
+# Import the function from main.py
+from main import execute_simplified_sui_transfer
+
 # ANSI colors for better output
 GREEN = "\033[92m"
 RED = "\033[91m"
@@ -26,7 +29,7 @@ class MCPClient:
         try:
             # Set up server parameters - connect to existing server
             server_params = StdioServerParameters(
-                command="python",
+                command="./venv/bin/python",
                 args=["mcp_server.py"],
                 client_info={
                     "name": "simple-mcp-client",
@@ -134,12 +137,27 @@ class MCPClient:
                     
                 elif command.lower() == 'time':
                     response = await self.call_tool("get_time")
-                    print(f"{GREEN}Server response:{RESET} {response}")
+                    # The call_tool method already prints the response, so this might be redundant
+                    # or could be adjusted based on what call_tool actually returns and prints.
+                    # For now, assuming call_tool handles its own printing or returns something simple.
+                    # If response from call_tool is None or simple, this print might be okay,
+                    # otherwise, it might need adjustment.
+                    # print(f"{GREEN}Server response:{RESET} {response}") 
+                    
                 elif command.lower() == 'purchase_token':
+                    print(f"{BLUE}Initiating SUI transfer process...{RESET}")
+                    # Call the imported function from main.py
+                    # This function is synchronous, so if mcp_client is heavily async,
+                    # this might block. However, given it's a CLI tool, direct call is often fine.
+                    # If issues arise, asyncio.to_thread might be needed for long-running sync calls.
                     print("Purchasing token...")
+                    execute_simplified_sui_transfer()
+                    print("Waiting for transfer to complete...")
+                    await asyncio.sleep(3)
+                    print("trasnfer finished, waiting for token...")
                     response = await self.call_tool("purchase_token")
                     print(f"{GREEN}Server response:{RESET} {response}")
-                    
+                                        
                 else:
                     print(f"{RED}Unknown command. Type 'help' for usage information.{RESET}")
                     

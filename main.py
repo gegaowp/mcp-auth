@@ -245,69 +245,74 @@ class Suiwallet:
         finally:
             print("-" * 30)
 
-
-if __name__ == '__main__':
+def execute_simplified_sui_transfer():
     print("\n--- Simplified SUI Transfer ---")
     
     sender_mnemonic = input("Please paste the SENDER'S 12 or 24-word mnemonic phrase and press Enter:\n").strip()
     if not sender_mnemonic:
         print("No mnemonic provided. Exiting.")
-    else:
-        # Hardcoded recipient and amount
-        RECIPIENT_ADDRESS_HARDCODED = "0x95831b91dc0d4761530daa520274cc7bb1256b579784d7d223814c3f05c45b26"
-        AMOUNT_MIST_DEFAULT = 1000000 # 0.001 SUI
+        return # Exit the function if no mnemonic
 
-        rpc_url_to_use = Suiwallet.DEFAULT_RPC_URL # Use default RPC
+    # Hardcoded recipient and amount
+    RECIPIENT_ADDRESS_HARDCODED = "0x95831b91dc0d4761530daa520274cc7bb1256b579784d7d223814c3f05c45b26"
+    AMOUNT_MIST_DEFAULT = 1000000 # 0.001 SUI
 
-        print(f"\nAttempting transfer to: {RECIPIENT_ADDRESS_HARDCODED}")
-        print(f"Amount: {AMOUNT_MIST_DEFAULT} MIST")
+    rpc_url_to_use = Suiwallet.DEFAULT_RPC_URL # Use default RPC
 
-        try:
-            # 1. Derive sender address from the provided mnemonic
-            # We need a SuiConfig instance for recover_key_and_address that doesn't rely on saved configs
-            temp_config = SuiConfig.user_config(rpc_url=rpc_url_to_use)
-            # Ensure no active address or keys interfere from a global config, if any
-            temp_config._active_address = None
-            temp_config._private_keys = []
+    print(f"\nAttempting transfer to: {RECIPIENT_ADDRESS_HARDCODED}")
+    print(f"Amount: {AMOUNT_MIST_DEFAULT} MIST")
 
-            _, sender_address_str = temp_config.recover_keypair_and_address(
-                scheme=SignatureScheme.SECP256K1,
-                mnemonics=str(sender_mnemonic),
-                derivation_path=Suiwallet.DEFAULT_DERIVATION_PATH
+    try:
+        # 1. Derive sender address from the provided mnemonic
+        temp_config = SuiConfig.user_config(rpc_url=rpc_url_to_use)
+        temp_config._active_address = None
+        temp_config._private_keys = []
+
+        # The user updated this line to return 2 values.
+        # Original: _, _, sender_address_str = temp_config.recover_keypair_and_address(...)
+        keypair, sender_address_str = temp_config.recover_keypair_and_address(
+            scheme=SignatureScheme.SECP256K1,
+            mnemonics=str(sender_mnemonic),
+            derivation_path=Suiwallet.DEFAULT_DERIVATION_PATH
+        )
+        
+        if not sender_address_str: # Or check keypair if that's more indicative of a problem
+            raise ValueError("Could not derive sender address or keypair from the provided mnemonic.")
+        
+        print(f"Derived sender address: {sender_address_str}")
+
+        # 2. Initialize SyncClient to fetch gas objects
+        # The client needs to be initialized with the derived keypair to make authenticated calls if necessary,
+        # or at least the derived address if get_gas doesn't need the full keypair in config.
+        # For get_gas, only the address is needed, and the client setup is fine.
+        client = SyncClient(temp_config) 
+        
+        print(f"Fetching gas coins for sender: {sender_address_str}...")
+        # The user updated this line. client.get_gas expects a SuiAddress object.
+        gas_coins_result = client.get_gas(sender_address_str)
+        
+        if gas_coins_result.is_ok() and gas_coins_result.result_data and gas_coins_result.result_data.data:
+            gas_object_id = gas_coins_result.result_data.data[0].identifier
+            print(f"Using gas object: {gas_object_id}")
+            
+            Suiwallet.transfer_sui(
+                sender_mnemonic=sender_mnemonic,
+                recipient_address=RECIPIENT_ADDRESS_HARDCODED,
+                amount=AMOUNT_MIST_DEFAULT,
+                gas_object_id=gas_object_id,
+                rpc_url=rpc_url_to_use
             )
-            
-            if not sender_address_str:
-                raise ValueError("Could not derive sender address from the provided mnemonic.")
-            
-            print(f"Derived sender address: {sender_address_str}")
+        elif not gas_coins_result.is_ok():
+            print(f"Error fetching gas coins: {gas_coins_result.result_string}")
+            print("Please ensure the address derived from your mnemonic has SUI and gas coins on the network.")
+        else: 
+            print(f"No gas coins found for the address: {sender_address_str}")
+            print("Please ensure the address derived from your mnemonic has SUI and gas coins on the network.")
 
-            # 2. Initialize SyncClient to fetch gas objects
-            client = SyncClient(temp_config) # Use the same temp_config
-            
-            print(f"Fetching gas coins for sender: {sender_address_str}...")
-            gas_coins_result = client.get_gas(sender_address_str) # get_gas expects SuiAddress type
-            
-            if gas_coins_result.is_ok() and gas_coins_result.result_data and gas_coins_result.result_data.data:
-                # Select the first available gas object
-                gas_object_id = gas_coins_result.result_data.data[0].identifier
-                print(f"Using gas object: {gas_object_id}")
-                
-                # 3. Perform the transfer
-                Suiwallet.transfer_sui(
-                    sender_mnemonic=sender_mnemonic,
-                    recipient_address=RECIPIENT_ADDRESS_HARDCODED,
-                    amount=AMOUNT_MIST_DEFAULT,
-                    gas_object_id=gas_object_id,
-                    rpc_url=rpc_url_to_use
-                )
-            elif not gas_coins_result.is_ok():
-                print(f"Error fetching gas coins: {gas_coins_result.result_string}")
-                print("Please ensure the address derived from your mnemonic has SUI and gas coins on the network.")
-            else: # No data or empty data
-                print(f"No gas coins found for the address: {sender_address_str}")
-                print("Please ensure the address derived from your mnemonic has SUI and gas coins on the network.")
+    except Exception as e:
+        print(f"An error occurred during the transfer process: {e}")
+        import traceback
+        traceback.print_exc()
 
-        except Exception as e:
-            print(f"An error occurred during the transfer process: {e}")
-            import traceback
-            traceback.print_exc()
+if __name__ == '__main__':
+    execute_simplified_sui_transfer()
