@@ -31,6 +31,6 @@ source venv/bin/activate
 
 # Install requirements
 echo "Installing requirements..."
-pip install -r requirements.txt
+venv/bin/python -m pip install -r requirements.txt
 
 echo "Setup complete! You can now run: source venv/bin/activate && python ./mcp_server.py" 
